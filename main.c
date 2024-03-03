@@ -1,168 +1,77 @@
 #include <raylib.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <raymath.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
 
-typedef uint8_t direction_t;
+void draw_blocks(Vector2 *segms, int score, Vector2 cube_size, Vector2 food_pos) {
+  for (int i = 0; i <= score; ++i) {
+    Vector2 cube_pos = Vector2Multiply(segms[i], cube_size);
+    DrawRectangleV(cube_pos, cube_size, GREEN);
+  }
+  DrawRectangleV(Vector2Multiply(food_pos, cube_size), cube_size, RED);
+}
 
-enum Block_type {
-  NONE = 0,
-  SNAKE = 1,
-  FOOD,
-};
-
-enum Direction_type {
-  UP = 1,
-  DOWN,
-  LEFT,
-  RIGHT,
-};
-
-void move_snake(direction_t dir, int *head, int *tail, int new_tail,
-                uint8_t *board, int row_size) {
-  board[*tail] = NONE;
-  *tail = new_tail;
-  if (dir == UP) {
-    *head = *head - row_size;
-    board[*head] = SNAKE;
-  } else if (dir == DOWN) {
-    *head = *head + row_size;
-    board[*head] = SNAKE;
-  } else if (dir == LEFT) {
-    *head = *head - 1;
-    board[*head] = SNAKE;
-  } else if (dir == RIGHT) {
-    *head = *head + 1;
-    board[*head] = SNAKE;
+void get_input(Vector2 *dir) {
+  if (IsKeyDown(KEY_W) && dir->y != 1) {
+    *dir = (Vector2){0, -1};
+  } else if (IsKeyDown(KEY_A) && dir->x != 1) {
+    *dir = (Vector2){-1, 0};
+  } else if (IsKeyDown(KEY_S) && dir->y != -1) {
+    *dir = (Vector2){0, 1};
+  } else if (IsKeyDown(KEY_D) && dir->x != -1) {
+    *dir = (Vector2){1, 0};
   }
 }
 
-direction_t get_input(direction_t cur) {
-  if (IsKeyPressed(KEY_UP)) {
-    return UP;
-  } else if (IsKeyPressed(KEY_DOWN)) {
-    return DOWN;
-  } else if (IsKeyPressed(KEY_LEFT)) {
-    return LEFT;
-  } else if (IsKeyPressed(KEY_RIGHT)) {
-    return RIGHT;
-  }
-  return cur;
+void place_food(Vector2 *pos, Vector2 blocks, Vector2 *segms, int score) {
+  *pos = (Vector2){GetRandomValue(0, blocks.x - 1), GetRandomValue(0, blocks.y - 1)};
 }
 
-int place_random_food(uint8_t *board, int board_size) {
-  int ans;
-  while (true) {
-    ans = GetRandomValue(0, board_size - 1);
-    if (board[ans] != SNAKE) {
-      board[ans] = FOOD;
-      break;
-    }
-  }
-  return ans;
-}
+int main(void) {
+  int block_side = 50;
+  Vector2 block_size = {block_side, block_side};
+  Vector2 blocks = {20, 15};
+  Vector2 window = Vector2Multiply(blocks, block_size);
+  int update_fr = 15;
+  Vector2 food_pos = {-1, -1};
+  Vector2 dir = {1, 0};
+  Vector2 head = {0, 0};
+  int score = 1;
+  int segms_size = 256;
+  Vector2 segms[segms_size];
+  segms[0] = head;
 
-void display_board(uint8_t *board, int board_size, int block_size,
-                   int blocks_per_row) {
-  for (int i = 0; i <= board_size - 1; ++i) {
-    Color color;
-    double roundness;
-    switch (board[i]) {
-    case SNAKE:
-      color = GREEN;
-      roundness = .7f;
-      break;
-    case FOOD:
-      color = RED;
-      roundness = 1.0f;
-      break;
-    default:
-      continue;
-    }
-    Rectangle rect = {0, 0, 0, 0};
-    rect.x = (i % blocks_per_row) * block_size;
-    rect.y = (int)(i / blocks_per_row) * block_size;
-    rect.width = block_size;
-    rect.height = block_size;
-    DrawRectangleRounded(rect, roundness, 5, color);
-  }
-}
-
-int main(int argc, char **argv) {
-  if (argc < 5 || argc > 5) {
-    fprintf(stderr,
-            "too many or few arguments\nusage:\n\t%s <blocks x> <blocks y> "
-            "<game speed> <snake length> <block size in pixels>\n",
-            argv[0]);
-    exit(EXIT_FAILURE);
-  }
-
-  int block_size = atoi(argv[4]);
-  int speed = atoi(argv[3]);
-  int speed_mod = 0;
-  int game_x = atoi(argv[1]);
-  int game_y = atoi(argv[2]);
-  int wx = game_x * block_size;
-  int wy = game_y * block_size;
-  int board_size = game_x * game_y;
-  int player_head = board_size / 2 - 1;
-  int player_tail = player_head;
-  int text_size = (int)wy * 0.06;
-  uint8_t *board = malloc(board_size * sizeof(uint8_t));
-  direction_t dir = RIGHT;
-
-  board[player_head] = SNAKE;
-  place_random_food(board, board_size);
-
-  // for printing info about the starting values
-#ifndef NDEBUG
-  printf("blocks: %i x %i, speed: %i, block size: %i, window: %i x %i, board "
-         "size: %i, text size: %i\n",
-         game_x, game_y, speed, block_size, wx, wy, board_size, text_size);
-#endif
-
-  InitWindow(wx, wy, "snake game");
-  SetRandomSeed(42069);
+  InitWindow(window.x, window.y, "snake game");
+  SetRandomSeed(69420);
   SetTargetFPS(60);
 
-  bool playing = false;
-  // GAME LOOP
+  place_food(&food_pos, blocks, segms, score);
+
+  int update = 0;
   while (!WindowShouldClose()) {
-    // loop 1 for starting game
-    while (!playing) {
-      if (WindowShouldClose()) {
-        goto quit_game;
+    if (update > update_fr) {
+      fprintf(stderr, "score: %i\n", score);
+      fprintf(stderr, "%.0f, %.0f\n", food_pos.x, food_pos.y);
+      update = 0;
+      head = Vector2Add(dir, head);
+      if (Vector2Equals(head, food_pos)) {
+        place_food(&food_pos, blocks, segms, score);
+        ++score;
       }
-      if (IsKeyPressed(KEY_SPACE)) {
-        playing = true;
-        break;
+      for (int i = score; i >= 0; --i) {
+        segms[i] = segms[i - 1];
       }
-      BeginDrawing();
-      ClearBackground(BLACK);
-      DrawText("press space to play", 10, 10, text_size, WHITE);
-      EndDrawing();
-    } // end of loop 1
-
-    // game logic
-    dir = get_input(dir);
-    if (speed_mod > speed) {
-      speed_mod = 0;
-      move_snake(dir, &player_head, &player_tail, player_head, board, game_x);
+      segms[0] = head;
     }
-    ++speed_mod;
-
-    // rendering
+    ++update;
+    get_input(&dir);
     BeginDrawing();
     ClearBackground(BLACK);
-    display_board(board, board_size, block_size, game_x);
+    draw_blocks(segms, score, block_size, food_pos);
     EndDrawing();
-  } // end of GAME LOOP
+  }
 
-quit_game:
-  printf("-->%p\n", board);
-  free(board);
   CloseWindow();
   return EXIT_SUCCESS;
 }
