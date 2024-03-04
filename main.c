@@ -1,10 +1,11 @@
 #include <raylib.h>
 #include <raymath.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
-void draw_blocks(Vector2 *segms, int score, Vector2 cube_size, Vector2 food_pos) {
+void draw_blocks(Vector2 *segms, int score, Vector2 cube_size,
+                 Vector2 food_pos) {
   for (int i = 0; i <= score; ++i) {
     Vector2 cube_pos = Vector2Multiply(segms[i], cube_size);
     DrawRectangleV(cube_pos, cube_size, GREEN);
@@ -12,23 +13,23 @@ void draw_blocks(Vector2 *segms, int score, Vector2 cube_size, Vector2 food_pos)
   DrawRectangleV(Vector2Multiply(food_pos, cube_size), cube_size, RED);
 }
 
-void get_input(Vector2 *dir) {
-  if (IsKeyDown(KEY_W) && dir->y != 1) {
+void get_input(Vector2 *dir, Vector2 *coming) {
+  if (IsKeyDown(KEY_W) && coming->y != 1) {
     *dir = (Vector2){0, -1};
-  } else if (IsKeyDown(KEY_A) && dir->x != 1) {
+  } else if (IsKeyDown(KEY_A) && coming->x != 1) {
     *dir = (Vector2){-1, 0};
-  } else if (IsKeyDown(KEY_S) && dir->y != -1) {
+  } else if (IsKeyDown(KEY_S) && coming->y != -1) {
     *dir = (Vector2){0, 1};
-  } else if (IsKeyDown(KEY_D) && dir->x != -1) {
+  } else if (IsKeyDown(KEY_D) && coming->x != -1) {
     *dir = (Vector2){1, 0};
   }
 }
 
 void place_food(Vector2 *pos, Vector2 blocks, Vector2 *segms, int score) {
-  *pos = (Vector2){GetRandomValue(0, blocks.x - 1), GetRandomValue(0, blocks.y - 1)};
+  *pos = (Vector2){GetRandomValue(0, blocks.x - 1),
+                   GetRandomValue(0, blocks.y - 1)};
   for (int i = 0; i <= score; ++i) {
     if (Vector2Equals(segms[i], *pos)) {
-      puts("--> food placement overlapped with snake replacing");
       place_food(pos, blocks, segms, score);
     }
   }
@@ -36,15 +37,19 @@ void place_food(Vector2 *pos, Vector2 blocks, Vector2 *segms, int score) {
 
 bool self_collision_check(Vector2 *segms, int score) {
   for (int i = 1; i <= score; ++i) {
-    if (Vector2Equals(segms[i], segms[0])){
+    if (Vector2Equals(segms[i], segms[0])) {
       return true;
     }
   }
   return false;
 }
 
-void out_of_bounds(Vector2 head, Vector2 bounds) {
-  if ()
+bool out_of_bounds(Vector2 head, Vector2 bounds) {
+  if (FloatEquals(head.x, -1.0) || FloatEquals(head.y, -1.0) ||
+      FloatEquals(head.x, bounds.x) || FloatEquals(head.y, bounds.y)) {
+    return true;
+  }
+  return false;
 }
 
 void update_snake(Vector2 *segms, Vector2 head, int score) {
@@ -74,14 +79,14 @@ int main(void) {
   int update_fr = 15;
   Vector2 food_pos = {-1, -1};
   Vector2 dir = {1, 0};
+  Vector2 coming = dir;
   Vector2 head = {0, 0};
-  int score = 1;
+  int score = 0;
   int segms_size = 256;
   Vector2 segms[segms_size];
   segms[0] = head;
 
   InitWindow(window.x, window.y, "snake game");
-  SetRandomSeed(69420);
   SetTargetFPS(60);
 
   place_food(&food_pos, blocks, segms, score);
@@ -92,24 +97,25 @@ int main(void) {
     if (update > update_fr) {
       update = 0;
       head = Vector2Add(dir, head);
+      if (out_of_bounds(head, blocks) || self_collision_check(segms, score)) {
+        break;
+      }
       if (Vector2Equals(head, food_pos)) {
         place_food(&food_pos, blocks, segms, score);
         ++score;
       }
       update_snake(segms, head, score);
-      if (self_collision_check(segms, score)) {
-        break;
-      }
+      coming = dir;
     }
     ++update;
-    get_input(&dir);
+    get_input(&dir, &coming);
     // rendering
     BeginDrawing();
     ClearBackground(BLACK);
     draw_blocks(segms, score, block_size, food_pos);
     EndDrawing();
   }
-  
+
   game_over(score);
 
   CloseWindow();

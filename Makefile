@@ -1,5 +1,8 @@
 CFLAGS += -Wall -Wextra
-LDFLAGS += -lraylib -mwindows
+LDFLAGS += -lraylib -lm
+ifeq ($(OS),Windows_NT)
+	LDFLAGS += -mwindows
+endif
 SOURCES = main.c
 OBJS = $(SOURCES:.c=.o)
 NAME = snake-game
