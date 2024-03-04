@@ -1,12 +1,12 @@
-CFLAGS = -Wall -Wextra
-LDFLAGS = -lraylib
+CFLAGS += -Wall -Wextra
+LDFLAGS += -lraylib -mwindows
 SOURCES = main.c
 OBJS = $(SOURCES:.c=.o)
 NAME = snake-game
 
 default: release
 
-release: CFLAGS += -DNDEBUG -O3 -march=native
+release: CFLAGS += -DNDEBUG -O3
 release: $(NAME)
 
 debug: CFLAGS += -g

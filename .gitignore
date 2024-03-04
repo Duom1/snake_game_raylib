@@ -1,3 +1,6 @@
 libraylib.so.420
 *.o
 snake-game
+libgcc_s_seh-1.dll
+libwinpthread-1.dll
+libraylib.dll

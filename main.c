@@ -26,6 +26,44 @@ void get_input(Vector2 *dir) {
 
 void place_food(Vector2 *pos, Vector2 blocks, Vector2 *segms, int score) {
   *pos = (Vector2){GetRandomValue(0, blocks.x - 1), GetRandomValue(0, blocks.y - 1)};
+  for (int i = 0; i <= score; ++i) {
+    if (Vector2Equals(segms[i], *pos)) {
+      puts("--> food placement overlapped with snake replacing");
+      place_food(pos, blocks, segms, score);
+    }
+  }
+}
+
+bool self_collision_check(Vector2 *segms, int score) {
+  for (int i = 1; i <= score; ++i) {
+    if (Vector2Equals(segms[i], segms[0])){
+      return true;
+    }
+  }
+  return false;
+}
+
+void out_of_bounds(Vector2 head, Vector2 bounds) {
+  if ()
+}
+
+void update_snake(Vector2 *segms, Vector2 head, int score) {
+  for (int i = score; i >= 0; --i) {
+    segms[i] = segms[i - 1];
+  }
+  segms[0] = head;
+}
+
+void game_over(int score) {
+  char str_score[32];
+  sprintf(str_score, "score: %i", score);
+  for (int i = 0; i < 100; ++i) {
+    BeginDrawing();
+    ClearBackground(BLACK);
+    DrawText("GAME OVER!", 10, 10, 120, RED);
+    DrawText(str_score, 10, 140, 120, RED);
+    EndDrawing();
+  }
 }
 
 int main(void) {
@@ -50,27 +88,29 @@ int main(void) {
 
   int update = 0;
   while (!WindowShouldClose()) {
+    // updating and getting input
     if (update > update_fr) {
-      fprintf(stderr, "score: %i\n", score);
-      fprintf(stderr, "%.0f, %.0f\n", food_pos.x, food_pos.y);
       update = 0;
       head = Vector2Add(dir, head);
       if (Vector2Equals(head, food_pos)) {
         place_food(&food_pos, blocks, segms, score);
         ++score;
       }
-      for (int i = score; i >= 0; --i) {
-        segms[i] = segms[i - 1];
+      update_snake(segms, head, score);
+      if (self_collision_check(segms, score)) {
+        break;
       }
-      segms[0] = head;
     }
     ++update;
     get_input(&dir);
+    // rendering
     BeginDrawing();
     ClearBackground(BLACK);
     draw_blocks(segms, score, block_size, food_pos);
     EndDrawing();
   }
+  
+  game_over(score);
 
   CloseWindow();
   return EXIT_SUCCESS;
